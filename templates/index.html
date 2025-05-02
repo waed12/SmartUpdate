@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Classroom Simulation</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>Smart Classroom Sorting System</h1>
+
+    <div class="input-group">
+      <input type="text" id="array" placeholder="Enter array e.g., 5,3,2,4">
+      <select id="algorithm">
+        <option>Bubble Sort</option>
+        <option>Quick Sort</option>
+        <option>Merge Sort</option>
+      </select>
+      <button onclick="sortArray()">Sort</button>
+    </div>
+
+    <div id="output" class="output-box"></div>
+    <div id="feedback" class="feedback-box"></div>
+
+    <div class="chart-section">
+      <h3>Time Comparison Chart</h3>
+      <canvas id="timeChart" width="400" height="200"></canvas>
+    </div>
+
+    <hr>
+
+    <h2>Chatbot</h2>
+    <div class="chat-container">
+      <input type="text" id="chatInput" placeholder="Ask a question">
+      <button onclick="sendChat()">Send</button>
+    </div>
+    <div id="chatOutput" class="chat-output"></div>
+  </div>
+
+  <script>
+    async function sortArray() {
+      const array = document.getElementById("array").value.split(',').map(x => x.trim());
+      const algorithm = document.getElementById("algorithm").value;
+      const res = await fetch('/sort', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ array, algorithm })
+      });
+      const data = await res.json();
+
+      document.getElementById("output").innerHTML = `
+        <h3>Sorted Array:</h3> ${data.result.sorted_array.join(', ')}<br>
+        <strong>Comparisons:</strong> ${data.result.comparisons}<br>
+        <strong>Swaps:</strong> ${data.result.swaps}<br>
+        <strong>Time:</strong> ${data.result.time} seconds
+      `;
+
+      document.getElementById("feedback").innerHTML = `
+        <h3>Digital Twin Feedback:</h3>
+        <strong>Performance:</strong> ${data.feedback.performance}<br>
+        <strong>Tips:</strong> <ul>${data.feedback.tips.map(tip => `<li>${tip}</li>`).join('')}</ul>
+      `;
+
+      updateChart(algorithm, data.result.time);
+    }
+
+    async function sendChat() {
+      const message = document.getElementById("chatInput").value;
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      });
+      const data = await res.json();
+      document.getElementById("chatOutput").innerHTML += `
+        <p><strong>You:</strong> ${message}</p>
+        <p><strong>Bot:</strong> ${data.response}</p>
+      `;
+      document.getElementById("chatInput").value = "";
+    }
+
+    let timeChart = null;
+
+    function updateChart(algorithm, time) {
+      if (!timeChart) {
+        const ctx = document.getElementById('timeChart').getContext('2d');
+        timeChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: [algorithm],
+            datasets: [{
+              label: 'Time (seconds)',
+              data: [time],
+              backgroundColor: ['rgba(75, 192, 192, 0.6)'],
+              borderColor: ['rgba(75, 192, 192, 1)'],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Execution Time (s)'
+                }
+              }
+            }
+          }
+        });
+      } else {
+        const index = timeChart.data.labels.indexOf(algorithm);
+        if (index > -1) {
+          timeChart.data.datasets[0].data[index] = time;
+        } else {
+          timeChart.data.labels.push(algorithm);
+          timeChart.data.datasets[0].data.push(time);
+        }
+        timeChart.update();
+      }
+    }
+  </script>
+</body>
+</html>
